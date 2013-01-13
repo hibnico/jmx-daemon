@@ -21,13 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
-import javax.management.MBeanException;
-import javax.management.MalformedObjectNameException;
-import javax.management.ReflectionException;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -120,13 +113,21 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                     String format = request.get(2);
                     ArrayList<Object> values = new ArrayList<>();
                     for (int i = 3; i < request.size(); i += 2) {
-                        response.append(RESP_SEP);
                         Object value;
                         try {
-                            value = connection.getAttributeValue(request.get(i), request.get(i + 1));
+                            value = connection.getAttribute(request.get(i), request.get(i + 1));
                             values.add(value);
-                        } catch (MalformedObjectNameException | InstanceNotFoundException | IntrospectionException
-                                | AttributeNotFoundException | ReflectionException | MBeanException ex) {
+                        } catch (IOException ex) {
+                            log.warn("IO error on connection {}", url, ex);
+                            connection.close();
+                            values = null;
+                            response.append(RESP_ERR);
+                            response.append(RESP_SEP);
+                            response.append(RESP_ERR_IO);
+                            response.append(RESP_SEP);
+                            writeExceptionMessage(response, ex);
+                            break;
+                        } catch (Exception ex) {
                             log.warn("Error on {} for bean '{}' getting attribute '{}': {} ({})", url, request.get(i),
                                     request.get(i + 1), ex.getMessage(), ex.getClass().getSimpleName(), ex);
                             values = null;
@@ -136,16 +137,6 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                             response.append(RESP_SEP);
                             response.append("Failed to get on '" + url + "' bean '" + request.get(i) + "' attribute '"
                                     + request.get(i + 1) + "':  ");
-                            writeExceptionMessage(response, ex);
-                            break;
-                        } catch (IOException ex) {
-                            log.warn("IO error on connection {}", url, ex);
-                            connection.close();
-                            values = null;
-                            response.append(RESP_ERR);
-                            response.append(RESP_SEP);
-                            response.append(RESP_ERR_IO);
-                            response.append(RESP_SEP);
                             writeExceptionMessage(response, ex);
                             break;
                         }

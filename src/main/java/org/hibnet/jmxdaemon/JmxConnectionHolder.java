@@ -16,18 +16,26 @@
 package org.hibnet.jmxdaemon;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
 import javax.management.MBeanException;
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
+import javax.management.openmbean.CompositeData;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /*
  *  Copyright 2013 JMX Daemon contributors
  * 
@@ -43,10 +51,6 @@ import javax.management.remote.JMXConnectorFactory;
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import javax.management.remote.JMXServiceURL;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class JmxConnectionHolder {
 
@@ -86,22 +90,38 @@ public class JmxConnectionHolder {
         }
     }
 
-    public Object getAttribute(ObjectName mxbeanName, String attribute) throws AttributeNotFoundException,
-            InstanceNotFoundException, MBeanException, ReflectionException, IOException {
+    public Object getAttribute(String beanName, String attributePath) throws AttributeNotFoundException,
+            InstanceNotFoundException, MBeanException, ReflectionException, IOException, SecurityException,
+            MalformedObjectNameException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
+            NoSuchFieldException {
+        ObjectName mxbeanName = new ObjectName(beanName);
+        String[] path = attributePath.split("\\.");
         connectionStateLock.readLock().lock();
         try {
             ensureConnected(true);
-            return server.getAttribute(mxbeanName, attribute);
+            Object value = server.getAttribute(mxbeanName, path[0]);
+            for (int i = 1; i < path.length; i++) {
+                if (value == null) {
+                    return value;
+                }
+                if (value instanceof CompositeData) {
+                    value = ((CompositeData) value).get(path[i]);
+                } else {
+                    try {
+                        Method getter = value.getClass().getMethod(
+                                "get" + Character.toUpperCase(path[i].charAt(0)) + path[i].substring(1));
+                        value = getter.invoke(value);
+                    } catch (NoSuchMethodException e) {
+                        // no getter, try access directly the field
+                        Field field = value.getClass().getField(path[i]);
+                        value = field.get(value);
+                    }
+                }
+            }
+            return value;
         } finally {
             connectionStateLock.readLock().unlock();
         }
-    }
-
-    public Object getAttributeValue(String beanName, String attribute) throws IOException,
-            MalformedObjectNameException, InstanceNotFoundException, IntrospectionException, ReflectionException,
-            AttributeNotFoundException, MBeanException {
-        Object attValue = getAttribute(new ObjectName(beanName), attribute);
-        return attValue;
     }
 
     public void close() {
