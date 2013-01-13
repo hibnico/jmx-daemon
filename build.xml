@@ -42,7 +42,6 @@
     </target>
 
     <target name="compile" depends="ivy:resolve">
-        <echo message="${toString:ivy.compile.classpath}" />
         <mkdir dir="${basedir}/target/classes" />
         <javac srcdir="${basedir}/src/main/java" destdir="${basedir}/target/classes" debug="true" source="1.7" target="1.7" classpathref="ivy.compile.classpath" includeantruntime="false" />
     </target>
