@@ -13,7 +13,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<project name="jmx-daemon" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:ac="antlib:net.sf.antcontrib">
+<project name="jmx-daemon" xmlns:ivy="antlib:org.apache.ivy.ant">
 
     <tstamp />
     <property name="jmx-daemon.version" value="1.0" />
@@ -27,9 +27,6 @@
         <mkdir dir="${user.home}/.ivy2/jars" />
         <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" dest="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" usetimestamp="true" />
         <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" />
-
-        <get src="http://repo1.maven.org/maven2/ant-contrib/ant-contrib/20020829/ant-contrib-20020829.jar" dest="${user.home}/.ant/jars/ant-contrib-20020829.jar" usetimestamp="true" />
-        <taskdef resource="net/sf/antcontrib/antcontrib.properties" uri="antlib:net.sf.antcontrib" classpath="${user.home}/.ant/jars/ant-contrib-20020829.jar" />
     </target>
 
     <target name="clean">
