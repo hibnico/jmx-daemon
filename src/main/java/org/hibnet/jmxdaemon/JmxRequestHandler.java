@@ -16,6 +16,8 @@
 package org.hibnet.jmxdaemon;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,11 +42,9 @@ import org.slf4j.LoggerFactory;
 
 public class JmxRequestHandler extends SimpleChannelHandler {
 
-    private static final String REQ_CMD_GET = "GET";
+    static final String REQ_CMD_GET = "GET";
 
-    private static final String REQ_CMD_CLOSE = "CLOSE";
-
-    private static final String REQ_SEP = " ";
+    static final String REQ_CMD_CLOSE = "CLOSE";
 
     private static final String RESP_OK = "OK";
 
@@ -60,9 +60,11 @@ public class JmxRequestHandler extends SimpleChannelHandler {
 
     private static final String RESP_ERR_CONN = "CONNECTION_FAILED";
 
-    private static final String RESP_ERR_IO = "IO_ERROR";
+    private static final String RESP_ERR_GET_ATT = "GET_ATTRIBUTE_FAILED";
 
-    private static final String RESP_NA = "N/A";
+    private static final String RESP_ERR_FORMAT = "FORMAT_OUTPUT_FAILED";
+
+    private static final String RESP_ERR_IO = "IO_ERROR";
 
     private static final Logger log = LoggerFactory.getLogger(JmxRequestHandler.class);
 
@@ -97,40 +99,49 @@ public class JmxRequestHandler extends SimpleChannelHandler {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        String[] request = ((String) e.getMessage()).trim().split(REQ_SEP);
+        List<String> request = parseRequest((String) e.getMessage());
         StringBuilder response = new StringBuilder();
-        if (request.length == 0 || (request.length == 1 && request[0].length() == 0)) {
+        if (request.size() == 0 || (request.size() == 1 && request.get(0).length() == 0)) {
             response.append(RESP_ERR);
             response.append(RESP_SEP);
             response.append(RESP_ERR_NO_CMD);
-        } else if (request[0].equals(REQ_CMD_GET)) {
-            if (request.length < 4 || (request.length - 2) % 2 != 0) {
+        } else if (request.get(0).equals(REQ_CMD_GET)) {
+            if (request.size() < 5 || (request.size() - 2) % 2 != 1) {
                 response.append(RESP_ERR);
                 response.append(RESP_SEP);
                 response.append(RESP_ERR_ARGS_LEN);
                 response.append(RESP_SEP);
-                response.append("Expecting an odd number of arguments and at least 3 but there was "
-                        + (request.length - 1));
+                response.append("Expecting an even number of arguments and at least 4 but there is only "
+                        + (request.size() - 1));
             } else {
-                String url = request[1];
+                String url = request.get(1);
                 JmxConnectionHolder connection = getConnection(response, url);
                 if (connection != null) {
-                    response.append(RESP_OK);
-                    for (int i = 2; i < request.length; i += 2) {
+                    String format = request.get(2);
+                    ArrayList<Object> values = new ArrayList<>();
+                    for (int i = 3; i < request.size(); i += 2) {
                         response.append(RESP_SEP);
                         Object value;
                         try {
-                            value = connection.getAttributeValue(request[i], request[i + 1]);
-                            response.append(value.toString());
+                            value = connection.getAttributeValue(request.get(i), request.get(i + 1));
+                            values.add(value);
                         } catch (MalformedObjectNameException | InstanceNotFoundException | IntrospectionException
                                 | AttributeNotFoundException | ReflectionException | MBeanException ex) {
-                            log.warn("Error on {} for bean '{}' getting attribute '{}': {} ({})", url, request[i],
-                                    request[i + 1], ex.getMessage(), ex.getClass().getSimpleName(), ex);
-                            response.append(RESP_NA);
+                            log.warn("Error on {} for bean '{}' getting attribute '{}': {} ({})", url, request.get(i),
+                                    request.get(i + 1), ex.getMessage(), ex.getClass().getSimpleName(), ex);
+                            values = null;
+                            response.append(RESP_ERR);
+                            response.append(RESP_SEP);
+                            response.append(RESP_ERR_GET_ATT);
+                            response.append(RESP_SEP);
+                            response.append("Failed to get on '" + url + "' bean '" + request.get(i) + "' attribute '"
+                                    + request.get(i + 1) + "':  ");
+                            writeExceptionMessage(response, ex);
+                            break;
                         } catch (IOException ex) {
                             log.warn("IO error on connection {}", url, ex);
                             connection.close();
-                            response.setLength(0);
+                            values = null;
                             response.append(RESP_ERR);
                             response.append(RESP_SEP);
                             response.append(RESP_ERR_IO);
@@ -139,17 +150,31 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                             break;
                         }
                     }
+                    if (values != null) {
+                        try {
+                            String output = String.format(format, values.toArray());
+                            response.append(RESP_OK);
+                            response.append(RESP_SEP);
+                            response.append(output);
+                        } catch (Exception ex) {
+                            response.append(RESP_ERR);
+                            response.append(RESP_SEP);
+                            response.append(RESP_ERR_FORMAT);
+                            response.append(RESP_SEP);
+                            writeExceptionMessage(response, ex);
+                        }
+                    }
                 }
             }
-        } else if (request[0].equals(REQ_CMD_CLOSE)) {
-            if (request.length != 2) {
+        } else if (request.get(0).equals(REQ_CMD_CLOSE)) {
+            if (request.size() != 2) {
                 response.append(RESP_ERR);
                 response.append(RESP_SEP);
                 response.append(RESP_ERR_ARGS_LEN);
                 response.append(RESP_SEP);
-                response.append("Expecting 1 argument but there was " + (request.length - 1));
+                response.append("Expecting 1 argument but there was " + (request.size() - 1));
             } else {
-                String url = request[1];
+                String url = request.get(1);
                 JmxConnectionHolder connection = getConnection(response, url);
                 if (connection != null) {
                     connection.close();
@@ -161,7 +186,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
             response.append(RESP_SEP);
             response.append(RESP_ERR_UNKNOWN_CMD);
             response.append(RESP_SEP);
-            response.append(request[0]);
+            response.append(request.get(0));
         }
         response.append(RESP_SEP);
 
@@ -175,7 +200,66 @@ public class JmxRequestHandler extends SimpleChannelHandler {
         super.messageReceived(ctx, e);
     }
 
-    private void writeExceptionMessage(StringBuilder response, IOException ex) {
+    private List<String> parseRequest(String input) {
+        List<String> request = new ArrayList<>();
+        int p = 0;
+        while (p < input.length()) {
+            p = skipWhiteSpace(input, p);
+            if (p >= input.length()) {
+                break;
+            }
+            if (input.charAt(p) == '\'' || input.charAt(p) == '\"') {
+                char delim = input.charAt(p);
+                StringBuilder buffer = new StringBuilder();
+                while (p < input.length()) {
+                    int end = input.indexOf(delim, p + 1);
+                    if (end == -1) {
+                        buffer.append(input.substring(p + 1));
+                        p = input.length();
+                        break;
+                    }
+                    int i = input.indexOf('\\', p + 1);
+                    if (i == -1 || i > end) {
+                        buffer.append(input.substring(p + 1, end));
+                        p = end + 1;
+                        break;
+                    }
+                    buffer.append(input.substring(p + 1, i));
+                    if (i + 1 < input.length()) {
+                        buffer.append(input.charAt(i + 1));
+                    }
+                    p = i + 2;
+                }
+                request.add(buffer.toString());
+            } else {
+                int i = Integer.MAX_VALUE;
+                for (char c : new char[] { ' ', '\n', '\r', '\t' }) {
+                    int ic = input.indexOf(c, p);
+                    if (ic != -1) {
+                        i = Math.min(i, ic);
+                    }
+                }
+                if (i == Integer.MAX_VALUE) {
+                    request.add(input.substring(p));
+                    p = input.length();
+                } else {
+                    request.add(input.substring(p, i));
+                    p = i + 1;
+                }
+            }
+        }
+        return request;
+    }
+
+    private int skipWhiteSpace(String input, int p) {
+        while (p < input.length()
+                && (input.charAt(p) == ' ' || input.charAt(p) == '\n' || input.charAt(p) == '\r' || input.charAt(p) == '\t')) {
+            p++;
+        }
+        return p;
+    }
+
+    private void writeExceptionMessage(StringBuilder response, Throwable ex) {
         response.append(ex.getClass().getSimpleName() + ": "
                 + ex.getMessage().replaceAll("\n", " ").replaceAll("\t", " "));
     }
