@@ -13,7 +13,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<ivy-module version="2.0">
+<ivy-module version="2.2">
     <info organisation="org.hibnet" module="jmx-daemon" />
     <configurations>
         <conf name="default" extends="runtime" />
@@ -21,7 +21,7 @@
         <conf name="compile" />
         <conf name="test" extends="runtime,compile" />
     </configurations>
-    <dependencies defaultconf="runtime,compile->default">
+    <dependencies defaultconfmapping="runtime,compile->default">
         <dependency org="org.jboss.netty" name="netty" rev="3.2.8.Final" />
 
         <!-- for tests -->

@@ -1,0 +1,119 @@
+<!--
+    Copyright 2013 JMX Daemon contributors
+    
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<project name="jmx-daemon" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:ac="antlib:net.sf.antcontrib">
+
+    <tstamp />
+    <property name="jmx-daemon.version" value="1.0" />
+    <property name="jmx-daemon.version.qualifier" value="dev" />
+    <property name="jmx-daemon.version.full" value="${jmx-daemon.version}.${DSTAMP}${TSTAMP}-${jmx-daemon.version.qualifier}" />
+
+    <target name="init">
+        <mkdir dir="target" />
+
+        <property name="ivy.version" value="2.3.0-rc2" />
+        <mkdir dir="${user.home}/.ivy2/jars" />
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" dest="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" usetimestamp="true" />
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" />
+
+        <get src="http://repo1.maven.org/maven2/ant-contrib/ant-contrib/20020829/ant-contrib-20020829.jar" dest="${user.home}/.ant/jars/ant-contrib-20020829.jar" usetimestamp="true" />
+        <taskdef resource="net/sf/antcontrib/antcontrib.properties" uri="antlib:net.sf.antcontrib" classpath="${user.home}/.ant/jars/ant-contrib-20020829.jar" />
+    </target>
+
+    <target name="clean">
+        <delete dir="${basedir}/target" />
+    </target>
+
+    <target name="ivy:resolve" depends="init">
+        <ivy:configure />
+        <ivy:resolve file="${basedir}/ivy.xml" />
+        <ivy:cachepath pathid="ivy.compile.classpath" conf="compile" type="jar,bundle" />
+        <ivy:cachepath pathid="ivy.runtime.classpath" conf="runtime" type="jar,bundle" />
+        <ivy:cachepath pathid="ivy.test.classpath" conf="test" type="jar,bundle" />
+    </target>
+
+    <target name="compile" depends="ivy:resolve">
+        <echo message="${toString:ivy.compile.classpath}" />
+        <mkdir dir="${basedir}/target/classes" />
+        <javac srcdir="${basedir}/src/main/java" destdir="${basedir}/target/classes" debug="true" source="1.7" target="1.7" classpathref="ivy.compile.classpath" includeantruntime="false" />
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${basedir}/target/dist" />
+        <jar destfile="${basedir}/target/dist/jmx-daemon.jar" basedir="${basedir}/target/classes" />
+    </target>
+
+    <target name="compile-test" depends="compile,ivy:resolve">
+        <mkdir dir="${basedir}/target/test-classes" />
+        <javac srcdir="${basedir}/src/test/java" destdir="${basedir}/target/test-classes" debug="true" source="1.7" target="1.7" includeantruntime="false">
+            <classpath>
+                <pathelement location="${basedir}/target/classes" />
+                <path refid="ivy.test.classpath" />
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="test" depends="ivy:resolve,compile,compile-test">
+        <mkdir dir="${basedir}/target/reports/junit" />
+        <junit includeantruntime="no">
+            <classpath>
+                <pathelement location="${basedir}/target/test-classes" />
+                <pathelement location="${basedir}/target/classes" />
+                <path refid="ivy.test.classpath" />
+            </classpath>
+            <formatter type="plain" usefile="no" />
+            <formatter type="xml" />
+            <batchtest todir="${basedir}/target/reports/junit">
+                <fileset dir="${basedir}/src/test/java">
+                    <include name="**/*Test.java" />
+                    <exclude name="**/Abstract*Test.java" />
+                    <exclude name="**/*$*" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <target name="distribution" depends="jar">
+        <ivy:retrieve pattern="${basedir}/target/dist/lib/[artifact]-[revision].[ext]" conf="runtime" type="jar,bundle" sync="true" />
+        <manifestclasspath property="jar.launcher.classpath" jarfile="${basedir}/target/dist/jmx-daemon-launcher.jar">
+            <classpath>
+                <pathelement location="${basedir}/target/dist/jmx-daemon.jar" />
+                <fileset dir="${basedir}/target/dist/lib" includes="*.jar" />
+            </classpath>
+        </manifestclasspath>
+        <jar destfile="${basedir}/target/dist/jmx-daemon-launcher.jar">
+            <manifest>
+                <attribute name="Main-Class" value="org.hibnet.jmxdaemon.JmxDaemon" />
+                <attribute name="Class-Path" value="${jar.launcher.classpath}" />
+            </manifest>
+        </jar>
+        <delete dir="${basedir}/dist" />
+        <mkdir dir="${basedir}/dist" />
+        <copy file="${basedir}/target/dist/jmx-daemon.jar" tofile="${basedir}/dist/jmx-daemon-${jmx-daemon.version.full}.jar" />
+        <zip destfile="${basedir}/dist/jmx-daemon-${jmx-daemon.version.full}.zip" basedir="${basedir}/target/dist" />
+        <zip destfile="${basedir}/dist/jmx-daemon-src-${jmx-daemon.version.full}.zip">
+            <fileset dir="${basedir}">
+                <include name="src/**/*"/>
+                <include name="build.xml"/>
+                <include name="ivy.xml"/>
+                <include name="LICENSE.txt"/>
+                <include name="NOTICE"/>
+                <include name=".project" />
+                <include name=".classpath" />
+                <include name=".setttings" />
+            </fileset>
+        </zip>
+    </target>
+</project>
