@@ -69,6 +69,13 @@ public class JmxDaemon {
         String listendAddress = "localhost";
         int port = 2713;
         for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-h") || args[i].equals("--help")) {
+                System.out.println("Usage:");
+                System.out.println("    -p, --port <port>          : the port number to listen to (defaults to 2713)");
+                System.out
+                        .println("    -l, --liten-address <host> : the address the daemon will listen to (defaults to localhost)");
+                System.exit(0);
+            }
             if (args[i].equals("-p") || args[i].equals("--port")) {
                 if (args.length > i) {
                     try {
