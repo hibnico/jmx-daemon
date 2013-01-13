@@ -39,25 +39,25 @@ public class JmxRequestHandler extends SimpleChannelHandler {
 
     static final String REQ_CMD_CLOSE = "CLOSE";
 
-    private static final String RESP_OK = "OK";
+    static final String RESP_OK = "OK";
 
-    private static final String RESP_ERR = "ERR";
+    static final String RESP_ERR = "ERR";
 
-    private static final String RESP_SEP = "\n";
+    static final String RESP_SEP = "\n";
 
-    private static final String RESP_ERR_NO_CMD = "NO_CMD";
+    static final String RESP_ERR_NO_CMD = "NO_CMD";
 
-    private static final String RESP_ERR_UNKNOWN_CMD = "UNKNOWN_CMD";
+    static final String RESP_ERR_UNKNOWN_CMD = "UNKNOWN_CMD";
 
-    private static final String RESP_ERR_ARGS_LEN = "INVALID_ARGUMENT_LENGTH";
+    static final String RESP_ERR_ARGS_LEN = "INVALID_ARGUMENT_LENGTH";
 
-    private static final String RESP_ERR_CONN = "CONNECTION_FAILED";
+    static final String RESP_ERR_CONN = "CONNECTION_FAILED";
 
-    private static final String RESP_ERR_GET_ATT = "GET_ATTRIBUTE_FAILED";
+    static final String RESP_ERR_GET_ATT = "GET_ATTRIBUTE_FAILED";
 
-    private static final String RESP_ERR_FORMAT = "FORMAT_OUTPUT_FAILED";
+    static final String RESP_ERR_FORMAT = "FORMAT_OUTPUT_FAILED";
 
-    private static final String RESP_ERR_IO = "IO_ERROR";
+    static final String RESP_ERR_IO = "IO_ERROR";
 
     private static final Logger log = LoggerFactory.getLogger(JmxRequestHandler.class);
 
