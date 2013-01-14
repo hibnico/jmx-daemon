@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
@@ -187,6 +188,12 @@ public class JmxRequestHandler extends SimpleChannelHandler {
         ChannelEvent responseEvent = new DownstreamMessageEvent(channel, channelFuture, response.toString(),
                 channel.getRemoteAddress());
         ctx.sendDownstream(responseEvent);
+        channelFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                future.getChannel().close();
+            }
+        });
 
         super.messageReceived(ctx, e);
     }
