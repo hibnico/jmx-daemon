@@ -105,7 +105,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                 response.append(RESP_SEP);
                 response.append(RESP_ERR_ARGS_LEN);
                 response.append(RESP_SEP);
-                response.append("Expecting an even number of arguments and at least 4 but there is only "
+                response.append("Expecting an even number of arguments and at least 4 but there are "
                         + (request.size() - 1));
             } else {
                 String url = request.get(1);
