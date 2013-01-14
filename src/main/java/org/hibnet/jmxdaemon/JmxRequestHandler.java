@@ -269,6 +269,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
             return;
         }
         log.warn("Unexpected Error", e.getCause());
+        ctx.getChannel().close();
     }
 
     public void closeJmxConnections() {
