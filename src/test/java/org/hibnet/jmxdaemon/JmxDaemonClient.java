@@ -37,9 +37,9 @@ public class JmxDaemonClient {
 
     private ClientBootstrap bootstrap;
 
-    private Channel ch;
-
     private JmxDaemonClientHandler handler;
+
+    private SocketAddress serverAdd;
 
     private static class JmxDaemonClientHandler extends SimpleChannelUpstreamHandler {
 
@@ -54,6 +54,7 @@ public class JmxDaemonClient {
     }
 
     public JmxDaemonClient(SocketAddress serverAdd) {
+        this.serverAdd = serverAdd;
         Executor bossPool = Executors.newCachedThreadPool();
         Executor workerPool = Executors.newCachedThreadPool();
         bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(bossPool, workerPool));
@@ -63,13 +64,13 @@ public class JmxDaemonClient {
                 return Channels.pipeline(new StringDecoder(), new StringEncoder(), handler);
             };
         });
-        ChannelFuture cf = bootstrap.connect(serverAdd);
-        cf.awaitUninterruptibly();
-        ch = cf.getChannel();
     }
 
     public String send(String cmd) {
-        ch.write(cmd);
+        ChannelFuture cf = bootstrap.connect(serverAdd);
+        cf.awaitUninterruptibly();
+        Channel ch = cf.getChannel();
+        ch.write(cmd + "\n");
         try {
             return handler.responses.take();
         } catch (InterruptedException e) {
@@ -78,7 +79,6 @@ public class JmxDaemonClient {
     }
 
     public void close() {
-        ch.close();
         bootstrap.releaseExternalResources();
     }
 }
