@@ -76,7 +76,7 @@ public class JmxDaemonTest {
     private static RMIConnectorServer creatJMXConnectorAndRMIRegistry(int rmiRegistryPort) throws Exception {
         MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
         LocateRegistry.createRegistry(rmiRegistryPort);
-        Map<String, Object> env = new HashMap<>();
+        Map<String, Object> env = new HashMap<String, Object>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.rmi.registry.RegistryContextFactory");
         env.put(Context.PROVIDER_URL, "rmi://localhost:" + rmiRegistryPort);
         JMXServiceURL serviceURL = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://localhost:" + rmiRegistryPort

@@ -62,7 +62,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
 
     private static final Logger log = LoggerFactory.getLogger(JmxRequestHandler.class);
 
-    private Map<String, JmxConnectionHolder> connectionCache = new ConcurrentHashMap<>();
+    private Map<String, JmxConnectionHolder> connectionCache = new ConcurrentHashMap<String, JmxConnectionHolder>();
 
     private JmxConnectionHolder getConnection(StringBuilder response, String url) {
         try {
@@ -112,7 +112,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                 JmxConnectionHolder connection = getConnection(response, url);
                 if (connection != null) {
                     String format = request.get(2);
-                    ArrayList<Object> values = new ArrayList<>();
+                    ArrayList<Object> values = new ArrayList<Object>();
                     for (int i = 3; i < request.size(); i += 2) {
                         Object value;
                         try {
@@ -200,7 +200,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
     }
 
     private List<String> parseRequest(String input) {
-        List<String> request = new ArrayList<>();
+        List<String> request = new ArrayList<String>();
         int p = 0;
         while (p < input.length()) {
             p = skipWhiteSpace(input, p);

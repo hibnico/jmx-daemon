@@ -43,7 +43,7 @@ public class JmxDaemonClient {
 
     private static class JmxDaemonClientHandler extends SimpleChannelUpstreamHandler {
 
-        private LinkedBlockingQueue<String> responses = new LinkedBlockingQueue<>();
+        private LinkedBlockingQueue<String> responses = new LinkedBlockingQueue<String>();
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
