@@ -21,14 +21,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.Slf4JLoggerFactory;
+import org.jboss.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +56,10 @@ public class JmxDaemon {
         jmxRequestHandler = new JmxRequestHandler();
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new StringDecoder(), new StringEncoder(), jmxRequestHandler);
+                return Channels.pipeline(
+                        new DelimiterBasedFrameDecoder(1024 * 1024, ChannelBuffers
+                                .copiedBuffer("\n", CharsetUtil.UTF_8)), new StringDecoder(), new StringEncoder(),
+                        jmxRequestHandler);
             };
         });
         bootstrap.bind(listenAddress);
