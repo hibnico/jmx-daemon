@@ -149,6 +149,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                             response.append(RESP_SEP);
                             response.append(output);
                         } catch (Exception ex) {
+                            log.warn("Incorrect format '{}'", format, ex);
                             response.append(RESP_ERR);
                             response.append(RESP_SEP);
                             response.append(RESP_ERR_FORMAT);
