@@ -67,7 +67,7 @@ public class JmxRequestHandler extends SimpleChannelHandler {
     private JmxConnectionHolder getConnection(StringBuilder response, String url) {
         try {
             return getConnection(url);
-        } catch (IOException e) {
+        } catch (Exception e) {
             response.append(RESP_ERR);
             response.append(RESP_SEP);
             response.append(RESP_ERR_CONN);
