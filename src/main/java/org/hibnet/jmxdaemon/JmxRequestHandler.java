@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jboss.netty.channel.Channel;
@@ -118,7 +119,18 @@ public class JmxRequestHandler extends SimpleChannelHandler {
                         Object value;
                         try {
                             value = connection.getAttribute(request.get(i), request.get(i + 1));
-                            values.add(value);
+                            if (value instanceof Map) {
+                                for (Entry<Object, Object> entry : ((Map<Object, Object>) value).entrySet()) {
+                                    values.add(entry.getKey());
+                                    values.add(entry.getValue());
+                                }
+                            } else if (value instanceof List) {
+                                for (Object v : (List<Object>) value) {
+                                    values.add(v);
+                                }
+                            } else {
+                                values.add(value);
+                            }
                         } catch (IOException ex) {
                             log.warn("IO error on connection {}", url, ex);
                             connection.close();
