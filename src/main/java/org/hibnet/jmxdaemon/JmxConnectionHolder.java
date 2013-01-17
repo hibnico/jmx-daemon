@@ -80,7 +80,7 @@ public class JmxConnectionHolder {
     public Object getAttribute(String beanName, String attributePath) throws AttributeNotFoundException,
             InstanceNotFoundException, MBeanException, ReflectionException, IOException, SecurityException,
             MalformedObjectNameException, IllegalAccessException, IllegalArgumentException, InvocationTargetException,
-            NoSuchFieldException {
+            NoSuchFieldException, NoSuchMethodException {
         ObjectName mxbeanName = new ObjectName(beanName);
         List<String> path = parsePath(attributePath);
         connectionStateLock.readLock().lock();
@@ -108,6 +108,14 @@ public class JmxConnectionHolder {
                         }
                         value = ((List) value).get(x);
                     }
+                } else if (field.charAt(field.length() - 1) == ')') {
+                    if (field.charAt(field.length() - 2) != '(') {
+                        throw new IllegalArgumentException("Incorrect function call " + field + " in path "
+                                + attributePath);
+                    }
+                    String methodName = field.substring(0, field.length() - 2);
+                    Method method = value.getClass().getMethod(methodName);
+                    value = method.invoke(value);
                 } else if (value instanceof CompositeData) {
                     value = ((CompositeData) value).get(field);
                 } else {
