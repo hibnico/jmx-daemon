@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+[ -f /etc/default/jmx-daemon ] && . /etc/default/jmx-daemon
+
+case "$1" in
+	upgrade|remove)
+	if [ -x "/etc/init.d/jmx-daemon" ]; then
+		if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+			invoke-rc.d jmx-daemon stop || true
+		else
+			/etc/init.d/jmx-daemon stop || true
+		fi
+	fi
+	;;
+esac
+

@@ -1,0 +1,21 @@
+<configuration scan="true" scanPeriod="1 second" debug="false">
+
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/var/log/jmx-daemon/jmx-daemon.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>/var/log/jmx-daemon/jmx-daemon-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- keep 3 months worth of history -->
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{"HH:mm:ss,SSS"} %-5level [%-30.30logger] %message%n%ex</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="file" />
+    </root>
+
+</configuration>

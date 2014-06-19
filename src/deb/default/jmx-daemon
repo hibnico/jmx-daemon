@@ -1,0 +1,13 @@
+
+# Java heap fixed size
+#JD_HEAP_SIZE=
+
+# Or Java heap range size
+#JD_MIN_MEM=
+#JD_MAX_MEM=
+
+# Java extra options
+#JD_JAVA_OPTS=
+
+# jmx-daemon command line arguments
+#JD_ARGS=

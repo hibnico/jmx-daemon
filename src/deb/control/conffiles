@@ -1,0 +1,2 @@
+/etc/default/jmx-daemon
+/etc/jmx-daemon/logback.xml

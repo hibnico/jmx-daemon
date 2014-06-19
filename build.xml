@@ -15,21 +15,26 @@
 -->
 <project name="jmx-daemon" xmlns:ivy="antlib:org.apache.ivy.ant">
 
-    <tstamp />
-    <property name="jmx-daemon.version" value="1.0" />
-    <property name="jmx-daemon.version.qualifier" value="dev" />
-    <property name="jmx-daemon.version.full" value="${jmx-daemon.version}.${DSTAMP}${TSTAMP}-${jmx-daemon.version.qualifier}" />
-
     <target name="init">
+        <tstamp />
+        <property name="jmx-daemon.version" value="1.0" />
+        <property name="jmx-daemon.version.qualifier" value="dev" />
+        <property name="jmx-daemon.version.full" value="${jmx-daemon.version}.${DSTAMP}${TSTAMP}-${jmx-daemon.version.qualifier}" />
+
         <mkdir dir="target" />
 
         <property name="ivy.version" value="2.3.0-rc2" />
         <mkdir dir="${user.home}/.ivy2/jars" />
-        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" dest="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" usetimestamp="true" />
+        <get src="http://central.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" dest="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" usetimestamp="true" />
         <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="${user.home}/.ivy2/jars/ivy-${ivy.version}.jar" />
+
+        <property name="jdeb.version" value="1.1.1" />
+        <mkdir dir="${user.home}/.ant/antlibs" />
+        <get src="http://central.maven.org/maven2/org/vafer/jdeb/${jdeb.version}/jdeb-${jdeb.version}.jar" dest="${user.home}/.ant/antlibs/jdeb-${jdeb.version}.jar" usetimestamp="true" />
+        <taskdef name="deb" classname="org.vafer.jdeb.ant.DebAntTask" classpath="${user.home}/.ant/antlibs/jdeb-${jdeb.version}.jar" />
     </target>
 
-    <target name="clean">
+    <target name="clean" description="Clean up the build artifacts">
         <delete dir="${basedir}/target" />
     </target>
 
@@ -46,7 +51,7 @@
         <javac srcdir="${basedir}/src/main/java" destdir="${basedir}/target/classes" debug="true" source="1.6" target="1.6" classpathref="ivy.compile.classpath" includeantruntime="false" />
     </target>
 
-    <target name="jar" depends="compile">
+    <target name="jar" depends="compile" description="Build the jar">
         <mkdir dir="${basedir}/target/dist" />
         <jar destfile="${basedir}/target/dist/jmx-daemon.jar" basedir="${basedir}/target/classes" />
     </target>
@@ -61,7 +66,7 @@
         </javac>
     </target>
 
-    <target name="test" depends="ivy:resolve,compile,compile-test">
+    <target name="test" depends="ivy:resolve,compile,compile-test" description="Launch the unit tests">
         <mkdir dir="${basedir}/target/reports/junit" />
         <junit includeantruntime="no">
             <classpath>
@@ -81,24 +86,29 @@
         </junit>
     </target>
 
-    <target name="distribution" depends="jar">
+    <target name="distribution" depends="jar" description="Package the distribution">
         <ivy:retrieve pattern="${basedir}/target/dist/lib/[artifact]-[revision].[ext]" conf="runtime" type="jar,bundle" sync="true" />
-        <manifestclasspath property="jar.launcher.classpath" jarfile="${basedir}/target/dist/jmx-daemon-launcher.jar">
-            <classpath>
-                <pathelement location="${basedir}/target/dist/jmx-daemon.jar" />
-                <fileset dir="${basedir}/target/dist/lib" includes="*.jar" />
-            </classpath>
-        </manifestclasspath>
-        <jar destfile="${basedir}/target/dist/jmx-daemon-launcher.jar">
-            <manifest>
-                <attribute name="Main-Class" value="org.hibnet.jmxdaemon.JmxDaemon" />
-                <attribute name="Class-Path" value="${jar.launcher.classpath}" />
-            </manifest>
-        </jar>
+        <copy file="${basedir}/target/dist/jmx-daemon.jar" tofile="${basedir}/target/dist/lib/jmx-daemon-${jmx-daemon.version.full}.jar" />
         <delete dir="${basedir}/dist" />
         <mkdir dir="${basedir}/dist" />
+        <deb destfile="${basedir}/dist/jmx-daemon-${jmx-daemon.version.full}.deb" control="${basedir}/src/deb/control">
+            <data src="${basedir}/src/deb/etc" type="directory" conffile="true">
+                <mapper prefix="/etc/jmx-daemon" />
+            </data>
+            <data src="${basedir}/src/deb/default" type="directory" conffile="true">
+                <mapper prefix="/etc/default" />
+            </data>
+            <data src="${basedir}/src/deb/init.d/" type="directory">
+                <mapper prefix="/etc/init.d" fileMode="755" />
+            </data>
+            <data src="${basedir}/target/dist/lib" type="directory">
+                <mapper prefix="/usr/share/jmx-daemon/lib" />
+            </data>
+            <data src="${basedir}/src/deb/bin" type="directory">
+                <mapper prefix="/usr/share/jmx-daemon/bin" fileMode="755" />
+            </data>
+        </deb>
         <copy file="${basedir}/target/dist/jmx-daemon.jar" tofile="${basedir}/dist/jmx-daemon-${jmx-daemon.version.full}.jar" />
-        <zip destfile="${basedir}/dist/jmx-daemon-${jmx-daemon.version.full}.zip" basedir="${basedir}/target/dist" />
         <zip destfile="${basedir}/dist/jmx-daemon-src-${jmx-daemon.version.full}.zip">
             <fileset dir="${basedir}">
                 <include name="src/**/*"/>
@@ -112,4 +122,12 @@
             </fileset>
         </zip>
     </target>
+
+    <target name="init-release">
+        <property name="jmx-daemon.version.qualifier" value="RELEASE" />
+    </target>
+
+    <target name="release" depends="init-release,distribution" description="Package the distribution to be released">
+    </target>
+
 </project>

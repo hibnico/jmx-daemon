@@ -1,0 +1,10 @@
+Package: jmx-daemon
+Version: [[version]]
+Architecture: all
+Maintainer: Nicolas Lalevee <nicolas.lalevee@hibnet.org>
+Depends: libc6, adduser
+Section: web
+Priority: optional
+Homepage: https://github.com/nlalevee/jmx-daemon
+Description: Daemon which proxy data requests through long live connections to
+ JMX services

@@ -1,0 +1,39 @@
+#!/bin/sh
+set -e
+
+[ -f /etc/default/jmx-daemon ] && . /etc/default/jmx-daemon
+
+case "$1" in
+	configure)
+	[ -z "$JD_USER" ] && JD_USER="jmx-daemon"
+	[ -z "$JD_GROUP" ] && JD_GROUP="jmx-daemon"
+	if ! getent group "$JD_GROUP" > /dev/null 2>&1 ; then
+	    addgroup --system "$JD_GROUP" --quiet
+	fi
+	if ! id $JD_USER > /dev/null 2>&1 ; then
+	    adduser --system --home /usr/share/jmx-daemon --no-create-home \
+		--ingroup "$JD_GROUP" --disabled-password --shell /bin/false \
+		"$JD_USER"
+	fi
+
+	# Set user permissions on /var/log/jmx-daemon
+	mkdir -p /var/log/jmx-daemon
+	chown -R $JD_USER:$JD_GROUP /var/log/jmx-daemon
+	chmod 755 /var/log/jmx-daemon
+	
+	# configuration files should not be modifiable by jmx-daemon user, as this can be a security issue
+	chown -Rh root:root /etc/jmx-daemon/*
+	chmod 755 /etc/jmx-daemon
+	find /etc/jmx-daemon -type f -exec chmod 644 {} ';'
+	find /etc/jmx-daemon -type d -exec chmod 755 {} ';'
+	
+	if [ -x "/etc/init.d/jmx-daemon" ]; then
+		if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+			invoke-rc.d jmx-daemon start || true
+		else
+			/etc/init.d/jmx-daemon start || true
+		fi
+	fi
+	;;
+esac
+
