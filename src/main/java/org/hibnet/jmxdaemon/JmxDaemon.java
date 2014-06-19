@@ -20,6 +20,11 @@ import java.net.SocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -45,13 +50,17 @@ public class JmxDaemon {
 
     private JmxRequestHandler jmxRequestHandler;
 
-    public JmxDaemon(SocketAddress listenAddress) {
+    private final int workers;
+
+    public JmxDaemon(SocketAddress listenAddress, int workers) {
         this.listenAddress = listenAddress;
+        this.workers = workers;
     }
 
     public void start() {
         ExecutorService bossPool = Executors.newCachedThreadPool();
-        ExecutorService workerPool = Executors.newCachedThreadPool();
+        log.info("Creating worker thread pool with " + workers + " threads.");
+        ExecutorService workerPool = Executors.newFixedThreadPool(workers);
         bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(bossPool, workerPool));
         jmxRequestHandler = new JmxRequestHandler();
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
@@ -74,58 +83,58 @@ public class JmxDaemon {
     public static void main(String[] args) {
         String listendAddress = "localhost";
         int port = 2713;
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-h") || args[i].equals("--help")) {
-                if (args.length > i) {
-                    String cmd = args[++i].toUpperCase();
-                    if (cmd.equals(JmxRequestHandler.REQ_CMD_GET)) {
-                        displayHelpGET();
-                    } else if (cmd.equals(JmxRequestHandler.REQ_CMD_CLOSE)) {
-                        displayHelpCLOSE();
-                    } else {
-                        System.err.println("Unknwon command " + cmd);
-                        System.exit(1);
-                    }
-                } else {
-                    displayHelp();
+        int workers = 50;
+
+        Options options = new Options();
+        options.addOption("p", "port", true, "the port number to listen to (defaults to 2713)");
+        options.addOption("l", "listen", true, "the address the daemon will listen to (defaults to localhost)");
+        options.addOption("h", "help", false, "displays this message");
+        options.addOption("w", "workers", true, "number of worker threads, (default 50)");
+        CommandLineParser parser = new BasicParser();
+        try {
+            CommandLine cmd = parser.parse(options, args);
+            if (cmd.hasOption("p")) {
+                try {
+                    port = Integer.parseInt(cmd.getOptionValue("p"));
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Invalid Port number: " + cmd.getOptionValue("p"));
+                    System.exit(1);
                 }
+            }
+            if (cmd.hasOption("w")) {
+                try {
+                    workers = Integer.parseInt(cmd.getOptionValue("w"));
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Invalid workers number: " + cmd.getOptionValue("w"));
+                    System.exit(1);
+                }
+            }
+            if (cmd.hasOption("l")) {
+                listendAddress = cmd.getOptionValue("l");
+            }
+            if (cmd.hasOption("h")) {
+                displayHelp(options);
                 System.exit(0);
             }
-            if (args[i].equals("-p") || args[i].equals("--port")) {
-                if (args.length > i) {
-                    try {
-                        port = Integer.parseInt(args[++i]);
-                    } catch (NumberFormatException e) {
-                        System.err.println("Expecting a port number after '-p' or '--port' option");
-                        System.exit(1);
-                    }
-                } else {
-                    System.err.println("Expecting a port number after '-p' or '--port' option");
-                    System.exit(1);
-                }
-            }
-            if (args[i].equals("-l") || args[i].equals("--listen")) {
-                if (args.length > i) {
-                    listendAddress = args[++i];
-                } else {
-                    System.err.println("Expecting a listen address after '-l' or '--listen' option");
-                    System.exit(1);
-                }
-            }
+        } catch (org.apache.commons.cli.ParseException pe) {
+            System.err.println("Unable to parse options: " + pe.getMessage());
+            System.exit(1);
         }
 
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
-        JmxDaemon daemon = new JmxDaemon(new InetSocketAddress(listendAddress, port));
+        JmxDaemon daemon = new JmxDaemon(new InetSocketAddress(listendAddress, port), workers);
         daemon.start();
     }
 
-    private static void displayHelp() {
-        System.out.println("Usage:");
-        System.out.println("    -h, --help          : display this help");
-        System.out.println("    -h, --help <cmd>    : display the help about a specific command");
-        System.out.println("                          supported commands are: GET, CLOSE");
-        System.out.println("    -p, --port <port>   : the port number to listen to (defaults to 2713)");
-        System.out.println("    -l, --listen <host> : the address the daemon will listen to (defaults to localhost)");
+    private static void displayHelp(Options o) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("jmxdaemon", o);
+        System.out.println();
+        System.out.println("Summary of available commands");
+        System.out.println();
+        displayHelpGET();
+        System.out.println();
+        displayHelpCLOSE();
     }
 
     private static void displayHelpGET() {

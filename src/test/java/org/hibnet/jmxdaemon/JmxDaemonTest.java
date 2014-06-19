@@ -62,7 +62,7 @@ public class JmxDaemonTest {
     public static void start() throws Exception {
         try {
             InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
-            daemon = new JmxDaemon(new InetSocketAddress(jmxDaemonPort));
+            daemon = new JmxDaemon(new InetSocketAddress(jmxDaemonPort), 10);
             daemon.start();
             client = new JmxDaemonClient(new InetSocketAddress(jmxDaemonPort));
             jmxServer = creatJMXConnectorAndRMIRegistry(jmxPort);
